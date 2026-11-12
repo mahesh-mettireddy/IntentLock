@@ -101,33 +101,33 @@ Developers and evaluators can run IntentLock with **zero API cost** by acquiring
 3. Click **Create API Key** and copy the key (`AIzaSy...`).
 4. Set in `.env`:
    ```env
-   GEMINI_API_KEY=AIzaSyYourGoogleAIStudioKeyHere
+   GEMINI_API_KEY=<YOUR_GOOGLE_AI_STUDIO_KEY>
    GEMINI_PRIMARY_MODEL=gemini-2.5-flash
-   GEMINI_FALLBACK_MODEL=gemini-2.0-flash
+   GEMINI_FALLBACK_MODEL=gemini-2.5-flash-lite
    ```
 
 ### 3.2 Provider 2: Groq Cloud API (Free Developer Tier) &/or xAI Grok
 - **Groq Cloud (Recommended for 300+ tok/s LPU speed & generous free daily limits):**
   1. Navigate to [Groq Console API Keys](https://console.groq.com/keys).
   2. Sign in with GitHub or Google (free tier, no credit card required).
-  3. Click **Create API Key** and copy the key (`gsk_...`).
+  3. Click **Create API Key** and copy the key.
   4. Set in `.env`:
      ```env
-     GROQ_API_KEY=gsk_YourGroqApiKeyHere
-     GROQ_MODEL=llama-3.3-70b-versatile
+     GROQ_API_KEY=<YOUR_GROQ_API_KEY>
+     GROQ_MODEL=openai/gpt-oss-120b
      ```
 - **xAI Grok API (Optional Additional Tier):**
   1. Navigate to [xAI Console](https://console.x.ai/).
-  2. Generate an API key (`xai-...`) and set `XAI_API_KEY=xai-...` and `XAI_MODEL=grok-2-latest` in `.env`.
+  2. Generate an API key and set `XAI_API_KEY=<YOUR_XAI_KEY>` and `XAI_MODEL=grok-2-latest` in `.env`.
 
 ### 3.3 Provider 3: OpenRouter Free Models (`:free`) &/or OpenAI
 - **OpenRouter (Access to dozens of `:free` community & frontier models with 1 key):**
   1. Navigate to [OpenRouter Keys](https://openrouter.ai/keys).
-  2. Create a free account and generate an API key (`sk-or-v1-...`).
+  2. Create a free account and generate an API key.
   3. Set in `.env`:
      ```env
-     OPENROUTER_API_KEY=sk-or-v1-YourOpenRouterKeyHere
-     OPENROUTER_FREE_MODEL=meta-llama/llama-3.3-70b-instruct:free
+     OPENROUTER_API_KEY=<YOUR_OPENROUTER_API_KEY>
+     OPENROUTER_FREE_MODEL=google/gemma-4-31b-it:free
      ```
 
 ---

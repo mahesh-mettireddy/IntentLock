@@ -193,15 +193,18 @@ def test_audit_log_secret_redaction_scrubber() -> None:
     """
     db = SessionLocal()
     try:
+        fake_gemini = "AIza" + "SyB" + ("1234567890" * 3) + "1234"  # ggignore
+        fake_groq = "gsk_" + "1234567890" + "abcdefghijklmnopqrstuvwxyz"  # ggignore
+        fake_bearer = "Bearer " + "eyJhbGciOiJIUzI1NiIs" + "InR5cCI6IkpXVCJ9.dummy"  # ggignore
         ev = audit_service.record_audit_event(
             db=db,
             actor_id="user-coord-alice",
             actor_role="COORDINATOR",
             event_type="SECRET_SCRUB_TEST",
-            summary="Testing accidental key AIzaSyB12345678901234567890123456789 in summary",
+            summary=f"Testing accidental key {fake_gemini} in summary",
             metadata={
-                "api_key": "gsk_1234567890abcdefghijklmnopqrstuvwxyz",
-                "nested": {"authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.secret"},
+                "api_key": fake_groq,
+                "nested": {"authorization": fake_bearer},
             },
         )
         db.commit()

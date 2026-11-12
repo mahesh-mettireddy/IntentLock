@@ -48,19 +48,19 @@ APPROVAL_TTL_MINUTES=30
 # Priority Order: 1. Gemini -> 2. Groq -> 3. xAI (Grok) -> 4. OpenRouter -> 5. OpenAI
 # At least ONE provider key must be configured for live AI translation.
 # ============================================================================
-GEMINI_API_KEY=AIzaSy_replace_with_google_ai_studio_key
+GEMINI_API_KEY=<replace_with_google_ai_studio_key>
 GEMINI_MODEL=gemini-2.5-flash
 
-GROQ_API_KEY=gsk_replace_with_groq_cloud_key
-GROQ_MODEL=llama-3.3-70b-versatile
+GROQ_API_KEY=<replace_with_groq_cloud_key>
+GROQ_MODEL=openai/gpt-oss-120b
 
-XAI_API_KEY=xai-replace_with_xai_grok_key
+XAI_API_KEY=<replace_with_xai_grok_key>
 XAI_MODEL=grok-2-latest
 
-OPENROUTER_API_KEY=sk-or-v1-replace_with_openrouter_key
-OPENROUTER_MODEL=meta-llama/llama-3.3-70b-instruct
+OPENROUTER_API_KEY=<replace_with_openrouter_key>
+OPENROUTER_MODEL=google/gemma-4-31b-it:free
 
-OPENAI_API_KEY=sk-proj-replace_with_openai_key
+OPENAI_API_KEY=<replace_with_openai_key>
 OPENAI_MODEL=gpt-4o-mini
 
 # Router Circuit Breaker Tuning
