@@ -1,0 +1,32 @@
+# Render Blueprint for IntentLock (PayPal AI Hackathon 2026)
+# Deploys the unified FastAPI + React SPA container on Render's Free Tier with zero CORS/proxy drift.
+services:
+  - type: web
+    name: intentlock
+    runtime: docker
+    plan: free
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /api/v1/health
+    envVars:
+      - key: ENVIRONMENT
+        value: production
+      - key: DATABASE_URL
+        value: sqlite:///./intentlock.db
+      - key: INTENTLOCK_SIGNING_SECRET
+        generateValue: true
+      - key: PAYPAL_MODE
+        value: sandbox
+      - key: PAYPAL_BASE_URL
+        value: https://api-m.sandbox.paypal.com
+      - key: PAYPAL_MCP_ENABLED
+        value: "true"
+      - key: PAYPAL_CLIENT_ID
+        sync: false
+      - key: PAYPAL_CLIENT_SECRET
+        sync: false
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: GROQ_API_KEY
+        sync: false
+      - key: OPENROUTER_API_KEY
+        sync: false
