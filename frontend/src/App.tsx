@@ -56,6 +56,7 @@ export function App() {
   const [activeTab, setActiveTab] = useState<TopTab>('WORKSPACE');
   const [activeStep, setActiveStep] = useState<WorkflowStep>(1);
   const [prefillPrompt, setPrefillPrompt] = useState<string>('');
+  const [showProblemBanner, setShowProblemBanner] = useState<boolean>(true);
 
   // Personas & Auth
   const [personas, setPersonas] = useState<Persona[]>(FALLBACK_PERSONAS);
@@ -780,7 +781,96 @@ export function App() {
             onRunEvalSuite={handleRunEvalSuite}
           />
         ) : (
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+          <div className="space-y-5">
+            {/* Problem Statement & 3-Step Interactive Walkthrough Banner */}
+            {showProblemBanner ? (
+              <div className="bg-white rounded-2xl border border-indigo-200/90 shadow-2xs p-4 sm:p-5 relative overflow-hidden">
+                <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+                  <div className="space-y-1.5 max-w-3xl">
+                    <div className="inline-flex items-center gap-2 px-2.5 py-0.5 rounded-full bg-amber-50 border border-amber-200 text-amber-900 text-[11px] font-bold">
+                      <ShieldCheck className="w-3.5 h-3.5 text-amber-600" />
+                      THE PROBLEM WE SOLVE IN AGENTIC COMMERCE
+                    </div>
+                    <h1 className="text-base sm:text-lg font-bold text-slate-900 leading-snug">
+                      AI shopping agents can prepare carts—but teams cannot trust AI with direct PayPal payment authority.
+                    </h1>
+                    <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">
+                      If an AI hallucinates unit prices, miscalculates multi-pack quantities, or if a cart drifts between manager approval and payment (<strong className="text-slate-800">TOCTOU Cart Drift</strong>), unauthorized money leaves the account. <strong className="text-indigo-700">IntentLock</strong> separates AI cart preparation from human approval and cryptographically locks the exact approved cart (<code className="px-1.5 py-0.5 rounded bg-slate-100 text-slate-800 font-mono text-[11px]">RFC 8785 + SHA-256</code>) before executing checkout via <strong className="text-slate-800">PayPal Sandbox Orders v2 &amp; Agent Toolkit MCP</strong>.
+                    </p>
+                  </div>
+
+                  <div className="flex flex-col sm:flex-row lg:flex-col items-stretch sm:items-center lg:items-end gap-2 shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setActiveStep(1);
+                        handleSwitchPersona('user-coord-alice', 1);
+                      }}
+                      className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold bg-indigo-600 text-white hover:bg-indigo-700 transition shadow-xs"
+                    >
+                      <ShoppingBag className="w-4 h-4" />
+                      Try Interactive 3-Step Flow
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setShowProblemBanner(false)}
+                      className="text-[11px] font-medium text-slate-500 hover:text-slate-800 px-2 py-1"
+                    >
+                      Hide overview banner
+                    </button>
+                  </div>
+                </div>
+
+                <div className="mt-4 pt-3.5 border-t border-slate-100 grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
+                  <div className="flex items-start gap-2.5 bg-slate-50/80 p-2.5 rounded-xl border border-slate-200/70">
+                    <span className="w-5 h-5 rounded-full bg-indigo-600 text-white font-bold text-[11px] flex items-center justify-center shrink-0 mt-0.5">
+                      1
+                    </span>
+                    <div>
+                      <strong className="text-slate-900">AI Builds Cart (Alice · Coordinator):</strong>{' '}
+                      <span className="text-slate-600">
+                        Turns plain-English team needs into exact store SKUs with transparent pack-size math. Zero approval or payment authority.
+                      </span>
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-2.5 bg-slate-50/80 p-2.5 rounded-xl border border-slate-200/70">
+                    <span className="w-5 h-5 rounded-full bg-emerald-600 text-white font-bold text-[11px] flex items-center justify-center shrink-0 mt-0.5">
+                      2
+                    </span>
+                    <div>
+                      <strong className="text-slate-900">Manager Locks Hash (Bob · Approver):</strong>{' '}
+                      <span className="text-slate-600">
+                        Blocks self-approval (<code className="font-mono text-[10px]">G-04</code>) and signs an immutable <code className="font-mono text-[10px]">SHA-256</code> + <code className="font-mono text-[10px]">HMAC</code> lock on the approved cart version.
+                      </span>
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-2.5 bg-slate-50/80 p-2.5 rounded-xl border border-slate-200/70">
+                    <span className="w-5 h-5 rounded-full bg-blue-600 text-white font-bold text-[11px] flex items-center justify-center shrink-0 mt-0.5">
+                      3
+                    </span>
+                    <div>
+                      <strong className="text-slate-900">Verified PayPal Checkout (Charlie · Buyer):</strong>{' '}
+                      <span className="text-slate-600">
+                        Recomputes the cart hash before calling PayPal Sandbox. Any post-approval price or item change is blocked (<code className="font-mono text-[10px]">G-05</code>).
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="flex justify-end">
+                <button
+                  type="button"
+                  onClick={() => setShowProblemBanner(true)}
+                  className="inline-flex items-center gap-1.5 text-xs font-semibold text-indigo-600 hover:text-indigo-800 bg-indigo-50/80 px-3 py-1 rounded-lg border border-indigo-200/60"
+                >
+                  <ShieldCheck className="w-3.5 h-3.5" />
+                  Show Problem Statement &amp; 3-Step Guide
+                </button>
+              </div>
+            )}
+
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
             {/* Left Sidebar: Team Purchase Orders */}
             <aside className="lg:col-span-3 bg-white rounded-2xl border border-slate-200 shadow-2xs overflow-hidden">
               <div className="p-4 border-b border-slate-200 flex items-center justify-between bg-slate-50/70">
@@ -1009,6 +1099,7 @@ export function App() {
                 />
               )}
             </section>
+            </div>
           </div>
         )}
       </main>

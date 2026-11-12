@@ -1851,6 +1851,17 @@ def invoke_mcp_tool_endpoint(
     return invoke_mcp_tool(db=db, tool_name=tool_name, arguments=arguments, actor=current_user)
 
 
+@app.get("/api/health", response_model=SystemHealthOut, include_in_schema=False)
+def health_alias(db: Session = Depends(get_db)) -> SystemHealthOut:
+    return health_check(db=db)
+
+
+@app.get("/api/v1/paypal/config")
+@app.get("/api/paypal/config", include_in_schema=False)
+def get_paypal_config_endpoint() -> dict[str, Any]:
+    return paypal_mcp_service.get_paypal_runtime_status()
+
+
 # ---------------------------------------------------------------------------
 # Serve Compiled React Frontend (`frontend/dist`) in Single-Service Production
 # ---------------------------------------------------------------------------

@@ -140,6 +140,12 @@ class MultiProviderLLMRouter:
         return str(getattr(settings, env_name, "") or "").strip()
 
     def _get_provider_definitions(self) -> list[dict[str, Any]]:
+        raw_gemini_fb = (settings.GEMINI_FALLBACK_MODEL or "").strip()
+        gemini_fb = (
+            "gemini-2.5-flash-lite"
+            if (not raw_gemini_fb or raw_gemini_fb == "gemini-2.0-flash")
+            else raw_gemini_fb
+        )
         return [
             {
                 "priority": 1,
@@ -147,7 +153,7 @@ class MultiProviderLLMRouter:
                 "display_name": "Google Gemini API (Free Tier)",
                 "env_var": "GEMINI_API_KEY",
                 "primary_model": settings.GEMINI_MODEL or "gemini-2.5-flash",
-                "fallback_model": settings.GEMINI_FALLBACK_MODEL or "gemini-2.0-flash",
+                "fallback_model": gemini_fb,
                 "api_key": self._get_api_key("GEMINI_API_KEY") or self._get_api_key("GOOGLE_API_KEY"),
                 "signup_url": FREE_API_SIGNUP_URLS["google_gemini"],
             },
@@ -560,13 +566,16 @@ class MultiProviderLLMRouter:
                     f"https://generativelanguage.googleapis.com/v1beta/models/"
                     f"{model_name}:generateContent?key={api_key}"
                 )
+                gen_config: dict[str, Any] = {
+                    "temperature": 0.1,
+                    "responseMimeType": "application/json",
+                }
+                if model_name.startswith("gemini-2.5"):
+                    gen_config["thinkingConfig"] = {"thinkingBudget": 0}
                 payload = {
                     "systemInstruction": {"parts": [{"text": system_prompt}]},
                     "contents": [{"role": "user", "parts": [{"text": user_prompt}]}],
-                    "generationConfig": {
-                        "temperature": 0.1,
-                        "responseMimeType": "application/json",
-                    },
+                    "generationConfig": gen_config,
                 }
                 t0 = time.perf_counter()
                 try:

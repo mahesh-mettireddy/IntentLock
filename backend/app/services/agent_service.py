@@ -254,21 +254,32 @@ async def propose_initial_cart_for_request(
 
     # Ensure at least one valid item exists so canonical hash invariants hold
     if not validated_items and products_list:
-        default_prod = catalog_map.get("SKU-005") or products_list[0]
-        validated_items = [
+        import re as _re
+
+        hc_match = _re.search(
+            r"\b(\d+)\s*(?:-|\s)?(?:(?:new|remote|software|backend|frontend|senior|junior|full-stack|office)\s+){0,2}(?:person|people|engineer|engineers|hire|hires|designer|designers|staff|employee|employees|developer|developers)\b",
+            sanitized_prompt.lower(),
+        )
+        hc = max(1, min(10, int(hc_match.group(1)))) if hc_match else 1
+        starter_skus = ["SKU-010", "SKU-011", "SKU-012", "SKU-005"] if hc > 1 else ["SKU-005"]
+        fallback_raw = [
             {
-                "sku": default_prod.sku,
-                "product_name": default_prod.name,
-                "pack_size_desc": default_prod.pack_size_desc,
-                "unit_price_cents": int(default_prod.unit_price_cents),
-                "quantity": 1,
-                "line_total_cents": int(default_prod.unit_price_cents),
-                "selection_rationale": "Default starter item selected because no valid catalog SKUs matched the prompt.",
-                "headcount_math": f"1 x {default_prod.pack_size_desc}",
+                "sku": s,
+                "quantity": hc,
+                "selection_rationale": "Closest in-catalog workspace onboarding essential selected because requested hardware was out-of-catalog.",
+                "headcount_math": f"{hc} team member(s) x 1 unit = {hc} unit(s)",
             }
+            for s in starter_skus
+            if s in catalog_map
         ]
+        validated_items, extra_warn = enforce_catalog_grounding_and_pricing(
+            proposed_items=fallback_raw,
+            catalog_map=catalog_map,
+            budget_limit_cents=budget_limit_cents,
+        )
+        post_warnings.extend(extra_warn)
         post_warnings.append(
-            f"[G-01 NOTICE: No valid catalog SKUs remained after filtering; initialized draft with 1x {default_prod.sku} ({default_prod.name}) for Coordinator review]"
+            f"[G-01 NOTICE: Requested items were outside the 15-SKU Acme Workspace Supplies catalog; proposed {len(validated_items)} closest in-stock workspace peripheral(s) scaled for {hc} team member(s) for Coordinator review]"
         )
 
     combined_warnings: list[str] = []

@@ -1,7 +1,24 @@
 # IntentLock — Approval-Aware Agentic Purchasing with Cryptographic Intent Locking & PayPal Sandbox MCP
 
 > **PayPal AI Hackathon 2026 ("Build What's Next with PayPal and AI") Submission**  
-> **License:** [MIT](file:///d:/Projects/IntentLock/LICENSE) | **Merchant Scope:** Single Verified Merchant (`Acme Workspace Supplies`, `USD` only, 15 Synthetic SKUs) | **Payment Rail:** PayPal Sandbox Orders v2 REST API + PayPal MCP Server Toolkit + PayPal JS SDK
+> **Live Cloud Deployment:** **[https://intentlock-unys.onrender.com/](https://intentlock-unys.onrender.com/)**  
+> **License:** [MIT](file:///d:/Projects/IntentLock/LICENSE) | **Merchant Scope:** Single Verified Merchant (`Acme Workspace Supplies`, `USD` only, 15 Synthetic SKUs) | **Payment Rail:** PayPal Sandbox Orders v2 REST API + PayPal Agent Toolkit MCP (`@paypal/agent-toolkit`) + PayPal JS SDK
+
+---
+
+## 0. The Core Problem We Solve (And How to Try It Live in 60 Seconds)
+
+### The Problem in Agentic Commerce
+Businesses want AI agents to turn messy team supply requests into ready-to-buy carts, **but they cannot trust an AI agent with direct PayPal payment authority**:
+1. **AI Hallucinations & Pack-Size Math Errors:** An AI might pick individual units instead of multi-packs, exceed stock, or hallucinate unit prices.
+2. **No Separation of Duties:** A requester or AI agent should never be able to self-approve corporate spend.
+3. **Post-Approval Cart Drift (`TOCTOU` — Time-of-Check to Time-of-Use):** Even if a manager reviews a cart, if a single item, quantity, or cent changes between manager approval and payment execution, unauthorized money leaves the account.
+
+### How IntentLock Fixes It (Try Live at [https://intentlock-unys.onrender.com/](https://intentlock-unys.onrender.com/))
+1. **Step 1 — Build Cart (`Alice Chen · Coordinator`):** Select a preset scenario or type a supply need and click **Build Cart Proposal with AI**. The unprivileged AI proposes SKUs from the 15-item `Acme Workspace Supplies` catalog with explicit pack-size math. Click **Submit Cart for Manager Approval** (automatically switches you to Step 2 as Manager Bob).
+2. **Step 2 — Manager Approval Lock (`Bob Martinez · Approver`):** Review the cart and click **Approve & Lock Cart**. IntentLock serializes the cart via **RFC 8785 Canonical JSON**, computes a deterministic **`SHA-256 intent_hash`**, and signs an **`HMAC-SHA256 ApprovalLock`**. Click **Continue to Step 3: PayPal Checkout** (automatically switches you to Buyer Charlie).
+3. **Step 3 — Verified PayPal Sandbox Checkout (`Charlie Kim · Buyer`):** Click **One-Click PayPal Sandbox Order + Capture** (or use the interactive **PayPal JS SDK** button). IntentLock recomputes the cart's `SHA-256` hash right before calling **PayPal Sandbox Orders v2** (`/v2/checkout/orders`), binding `purchase_units[0].custom_id = intent_hash` inside the live PayPal order.
+   * *Bonus:* Open the **"Test Post-Approval Tamper & Guardrail Enforcement"** drawer at the bottom of Step 3 to see how any post-approval price hike or item drift is deterministically blocked (`409 STALE_APPROVAL_HASH_MISMATCH`) before PayPal is ever called.
 
 ---
 

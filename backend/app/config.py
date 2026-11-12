@@ -26,7 +26,7 @@ class Settings(BaseSettings):
     # Multi-LLM Failover API keys & models
     GEMINI_API_KEY: str = ""
     GEMINI_MODEL: str = "gemini-2.5-flash"
-    GEMINI_FALLBACK_MODEL: str = "gemini-2.0-flash"
+    GEMINI_FALLBACK_MODEL: str = "gemini-2.5-flash-lite"
     GROQ_API_KEY: str = ""
     GROQ_MODEL: str = "openai/gpt-oss-120b"
     XAI_API_KEY: str = ""
