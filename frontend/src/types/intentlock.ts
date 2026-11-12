@@ -310,6 +310,7 @@ export interface FailoverDrillHop {
   provider: string;
   model: string;
   status: string;
+  reason?: string | null;
   error_code?: string | null;
   error_message?: string | null;
   latency_ms?: number;
