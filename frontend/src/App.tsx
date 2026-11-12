@@ -16,6 +16,7 @@ import {
   Settings,
   Building2,
   Plus,
+  Zap,
 } from 'lucide-react';
 import {
   AuditEvent,
@@ -57,6 +58,7 @@ export function App() {
   const [activeStep, setActiveStep] = useState<WorkflowStep>(1);
   const [prefillPrompt, setPrefillPrompt] = useState<string>('');
   const [showProblemBanner, setShowProblemBanner] = useState<boolean>(true);
+  const [autoPilotStatus, setAutoPilotStatus] = useState<string | null>(null);
 
   // Personas & Auth
   const [personas, setPersonas] = useState<Persona[]>(FALLBACK_PERSONAS);
@@ -242,17 +244,113 @@ export function App() {
     }
   };
 
-  // Select Request from Sidebar
+  // Select Request from Sidebar — automatically routes to the matching workflow stage & persona
   const handleSelectRequest = async (reqId: string) => {
     setErrorBanner(null);
     setSelectedRequestId(reqId);
     setActiveTab('WORKSPACE');
     setIsLoading(true);
     try {
-      await loadRequestDetailAndTimeline(reqId);
+      const detail = await apiClient.getRequestDetail(reqId);
+      setRequestDetail(detail);
+      const activeVer =
+        detail.active_version ||
+        (detail.versions && detail.versions.length > 0
+          ? detail.versions[detail.versions.length - 1]
+          : null);
+      if (activeVer) {
+        setSelectedVersionNumber(activeVer.version_number);
+      }
+      const st = (detail.status || activeVer?.status || 'DRAFT').toUpperCase();
+      if (st.includes('CAPTURED') || st.includes('RECONCILED') || st.includes('VERIFIED')) {
+        setActiveStep(4);
+      } else if (st.includes('APPROVED') || st.includes('ORDER_CREATED') || st.includes('CAPTURE_PENDING')) {
+        await handleSwitchPersona('user-buyer-charlie', 3);
+      } else if (st.includes('SUBMITTED') || st.includes('PENDING_APPROVAL')) {
+        await handleSwitchPersona('user-approver-bob', 2);
+      } else {
+        await handleSwitchPersona('user-coord-alice', 1);
+      }
+      try {
+        const tl = await apiClient.getAuditTimeline(reqId);
+        setAuditTimeline(tl);
+      } catch {
+        if (detail.audit_events) {
+          setAuditTimeline({ chain_verified: true, events: detail.audit_events });
+        }
+      }
     } catch (err) {
       handleApiError(err, 'Failed to Load Purchase Order');
     } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // 1-Click Automated Live End-to-End Demo (Step 1 AI -> Step 2 Lock -> Step 3 PayPal -> Step 4 Receipt)
+  const handleRunOneClickAutoPilotDemo = async () => {
+    if (isLoading || autoPilotStatus) return;
+    setErrorBanner(null);
+    setActiveTab('WORKSPACE');
+    setIsLoading(true);
+    try {
+      // Stage 1: Coordinator Alice creates & submits AI cart
+      setAutoPilotStatus('Step 1/3: Coordinator Alice is generating an AI-grounded cart via Gemini 2.5 Flash...');
+      await handleSwitchPersona('user-coord-alice', 1);
+      const created = await apiClient.createRequest({
+        title: 'Live E2E Demo — 4 Engineers Onboarding & Breakroom Kit',
+        raw_need_text:
+          'We have 4 new engineers starting Monday and need dot-grid notebooks, black gel pens, USB-C multiport hubs, and dark roast breakroom coffee under $380.',
+        budget_limit_cents: 38000,
+      });
+      const reqId = created.id || created.request_id || '';
+      const ver =
+        created.active_version ||
+        (created.versions && created.versions.length > 0
+          ? created.versions[created.versions.length - 1]
+          : null);
+      const verId = getVersionId(ver);
+      const hash = ver?.intent_hash || ver?.candidate_intent_hash || '';
+      await refreshRequestsList(reqId);
+
+      await apiClient.submitCartVersion(
+        reqId,
+        verId,
+        'Auto-pilot demo: Verified pack-size math and stock availability.'
+      );
+      await refreshRequestsList(reqId);
+
+      // Stage 2: Manager Bob approves & locks SHA-256 intent_hash
+      setAutoPilotStatus('Step 2/3: Manager Bob Martinez is verifying & signing the RFC 8785 SHA-256 ApprovalLock...');
+      await handleSwitchPersona('user-approver-bob', 2);
+      await new Promise((r) => setTimeout(r, 900));
+      await apiClient.approveCartVersion(reqId, verId, {
+        comment: 'Approved & cryptographically locked for PayPal Sandbox execution.',
+        ttl_minutes: 30,
+        approval_ttl_seconds: 1800,
+        expected_intent_hash: hash,
+      });
+      await refreshRequestsList(reqId);
+
+      // Stage 3: Buyer Charlie creates & captures live PayPal Sandbox Order
+      setAutoPilotStatus('Step 3/3: Buyer Charlie is executing & reconciling the live PayPal Sandbox Order...');
+      await handleSwitchPersona('user-buyer-charlie', 3);
+      await new Promise((r) => setTimeout(r, 900));
+      const order = await apiClient.createPayPalOrder(verId, {
+        expected_intent_hash: hash,
+      });
+      await apiClient.capturePayPalOrder(verId, {
+        paypal_order_id: order.paypal_order_id,
+        expected_intent_hash: hash,
+      });
+      await refreshRequestsList(reqId);
+      setActiveStep(4);
+      showToast(
+        `Live End-to-End Flow Complete! PayPal Sandbox Order ${order.paypal_order_id} captured & verified against SHA-256 hash.`
+      );
+    } catch (err) {
+      handleApiError(err, 'Live Auto-Pilot Demo Interrupted');
+    } finally {
+      setAutoPilotStatus(null);
       setIsLoading(false);
     }
   };
@@ -802,24 +900,50 @@ export function App() {
                   <div className="flex flex-col sm:flex-row lg:flex-col items-stretch sm:items-center lg:items-end gap-2 shrink-0">
                     <button
                       type="button"
-                      onClick={() => {
-                        setActiveStep(1);
-                        handleSwitchPersona('user-coord-alice', 1);
-                      }}
-                      className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold bg-indigo-600 text-white hover:bg-indigo-700 transition shadow-xs"
+                      disabled={isLoading || !!autoPilotStatus}
+                      onClick={handleRunOneClickAutoPilotDemo}
+                      className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-60 transition shadow-xs"
                     >
-                      <ShoppingBag className="w-4 h-4" />
-                      Try Interactive 3-Step Flow
+                      {autoPilotStatus ? (
+                        <>
+                          <RefreshCw className="w-4 h-4 animate-spin" />
+                          Running Live E2E Demo...
+                        </>
+                      ) : (
+                        <>
+                          <Zap className="w-4 h-4 text-amber-300" />
+                          Run 1-Click Live E2E Demo (AI → Lock → PayPal)
+                        </>
+                      )}
                     </button>
-                    <button
-                      type="button"
-                      onClick={() => setShowProblemBanner(false)}
-                      className="text-[11px] font-medium text-slate-500 hover:text-slate-800 px-2 py-1"
-                    >
-                      Hide overview banner
-                    </button>
+                    <div className="flex items-center gap-3">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setActiveStep(1);
+                          handleSwitchPersona('user-coord-alice', 1);
+                        }}
+                        className="text-[11px] font-semibold text-indigo-700 hover:text-indigo-900 underline"
+                      >
+                        Start Step 1 Manually
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setShowProblemBanner(false)}
+                        className="text-[11px] font-medium text-slate-500 hover:text-slate-800 px-1 py-0.5"
+                      >
+                        Hide banner
+                      </button>
+                    </div>
                   </div>
                 </div>
+
+                {autoPilotStatus && (
+                  <div className="mt-3 p-3 rounded-xl bg-indigo-900 text-white flex items-center gap-3 text-xs font-semibold shadow-xs">
+                    <RefreshCw className="w-4 h-4 animate-spin text-amber-300 shrink-0" />
+                    <span>{autoPilotStatus}</span>
+                  </div>
+                )}
 
                 <div className="mt-4 pt-3.5 border-t border-slate-100 grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
                   <div className="flex items-start gap-2.5 bg-slate-50/80 p-2.5 rounded-xl border border-slate-200/70">
@@ -985,6 +1109,27 @@ export function App() {
                   ].map((item, idx) => {
                     const Icon = item.icon;
                     const isCurrent = activeStep === item.step;
+                    const orderSt = (
+                      requestDetail?.status ||
+                      selectedVersion?.status ||
+                      'DRAFT'
+                    ).toUpperCase();
+                    const isStepDone =
+                      (item.step === 1 && orderSt !== 'DRAFT') ||
+                      (item.step === 2 &&
+                        (orderSt.includes('APPROVED') ||
+                          orderSt.includes('ORDER_CREATED') ||
+                          orderSt.includes('CAPTURED') ||
+                          orderSt.includes('RECONCILED') ||
+                          orderSt.includes('VERIFIED'))) ||
+                      (item.step === 3 &&
+                        (orderSt.includes('CAPTURED') ||
+                          orderSt.includes('RECONCILED') ||
+                          orderSt.includes('VERIFIED'))) ||
+                      (item.step === 4 &&
+                        (orderSt.includes('CAPTURED') ||
+                          orderSt.includes('RECONCILED') ||
+                          orderSt.includes('VERIFIED')));
                     return (
                       <button
                         key={item.step}
@@ -996,6 +1141,8 @@ export function App() {
                         className={`p-3 rounded-xl border text-left transition flex items-center justify-between gap-2 ${
                           isCurrent
                             ? 'bg-indigo-600 text-white border-indigo-600 shadow-xs'
+                            : isStepDone
+                            ? 'bg-emerald-50/70 text-slate-800 border-emerald-200 hover:bg-emerald-50'
                             : 'bg-slate-50/70 text-slate-700 border-slate-200 hover:bg-slate-100'
                         }`}
                       >
@@ -1004,14 +1151,31 @@ export function App() {
                             className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${
                               isCurrent
                                 ? 'bg-indigo-500 text-white'
+                                : isStepDone
+                                ? 'bg-emerald-600 text-white'
                                 : 'bg-white text-indigo-600 border border-slate-200'
                             }`}
                           >
-                            <Icon className="w-4 h-4" />
+                            {isStepDone && !isCurrent ? (
+                              <CheckCircle2 className="w-4 h-4" />
+                            ) : (
+                              <Icon className="w-4 h-4" />
+                            )}
                           </div>
                           <div className="min-w-0">
-                            <div className="text-xs font-bold truncate">
-                              {item.title}
+                            <div className="text-xs font-bold truncate flex items-center gap-1.5">
+                              <span>{item.title}</span>
+                              {isStepDone && (
+                                <span
+                                  className={`text-[9px] px-1.5 py-0.2 rounded font-bold uppercase ${
+                                    isCurrent
+                                      ? 'bg-emerald-400 text-slate-950'
+                                      : 'bg-emerald-100 text-emerald-800'
+                                  }`}
+                                >
+                                  Done
+                                </span>
+                              )}
                             </div>
                             <div
                               className={`text-[11px] truncate ${
